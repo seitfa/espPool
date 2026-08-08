@@ -91,15 +91,23 @@ float PoolConfigComponent::calculate_dosing_time_minutes(float acid_ml) const {
 }
 
 void PoolConfigComponent::load_config() {
+  // Default storage
   this->storage_ = PoolConfigStorage{};
-  Preferences prefs;
-  prefs.begin("pool_ctrl", true);
-  if (prefs.isKey("cfg") && prefs.getBytes("cfg", &this->storage_, sizeof(this->storage_)) == sizeof(this->storage_) && this->storage_.magic == 0x50434F4E) {
-    // Stored configuration loaded successfully.
+
+  // Use esphome preferences API. Use a stable 32-bit key for this component's config.
+  static constexpr uint32_t CONFIG_PREF_KEY = 0x50434647;  // 'PCFG'
+
+  if (::esphome::global_preferences != nullptr) {
+    auto pref = ::esphome::global_preferences->make_preference<PoolConfigStorage>(CONFIG_PREF_KEY);
+    if (pref.load(&this->storage_) && this->storage_.magic == 0x50434F4E) {
+      // Stored configuration loaded successfully.
+    } else {
+      this->storage_ = PoolConfigStorage{};
+    }
   } else {
+    // Preferences backend not available (e.g., unsupported platform), keep defaults.
     this->storage_ = PoolConfigStorage{};
   }
-  prefs.end();
 
   this->target_ph_ = this->storage_.target_ph;
   this->pool_volume_liters_ = this->storage_.pool_volume_liters;
@@ -122,10 +130,14 @@ void PoolConfigComponent::save_config() {
   this->storage_.max_acid_ml_per_day = this->max_acid_ml_per_day_;
   this->storage_.acid_dosing_enabled = this->acid_dosing_enabled_;
   this->storage_.pump_manual_disabled = this->pump_manual_disabled_;
-  Preferences prefs;
-  prefs.begin("pool_ctrl", false);
-  prefs.putBytes("cfg", &this->storage_, sizeof(this->storage_));
-  prefs.end();
+
+  static constexpr uint32_t CONFIG_PREF_KEY = 0x50434647;  // 'PCFG'
+
+  if (::esphome::global_preferences != nullptr) {
+    auto pref = ::esphome::global_preferences->make_preference<PoolConfigStorage>(CONFIG_PREF_KEY);
+    pref.save(&this->storage_);
+    ::esphome::global_preferences->sync();
+  }
 }
 
 
