@@ -1,0 +1,7 @@
+{
+  "name": "pool_config",
+  "version": "1.0.0",
+  "esphome_version": ">=2023.0.0",
+  "dependencies": [],
+  "codeowners": ["@fabia"]
+}

@@ -1,0 +1,7 @@
+{
+  "name": "atlas_ezo_ph",
+  "version": "1.0.0",
+  "esphome_version": ">=2023.0.0",
+  "dependencies": ["i2c"],
+  "codeowners": ["@fabia"]
+}

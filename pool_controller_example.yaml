@@ -1,0 +1,232 @@
+esphome:
+  name: pool_controller
+  platform: ESP32
+  board: esp32-s3-eth-8di-8ro
+
+external_components:
+  - source: local
+    path: custom_components/pool_config
+  - source: local
+    path: custom_components/atlas_ezo_ph
+  - source: local
+    path: custom_components/pool_ph_controller
+
+includes:
+  - custom_components/pool_config/config.h
+  - custom_components/atlas_ezo_ph/atlas_ezo_ph.h
+  - custom_components/pool_ph_controller/ph_controller.h
+
+globals:
+  - id: pool_config
+    type: pool_controller::PoolConfigComponent *
+    restore_value: no
+    initial_value: 'nullptr'
+  - id: pool_ph_sensor
+    type: pool_controller::AtlasEzoPhSensor *
+    restore_value: no
+    initial_value: 'nullptr'
+  - id: pool_pump_switch
+    type: switch_::Switch *
+    restore_value: no
+    initial_value: 'nullptr'
+  - id: pool_ph_controller
+    type: pool_controller::PoolPhController *
+    restore_value: no
+    initial_value: 'nullptr'
+
+i2c:
+  sda: 21
+  scl: 22
+  scan: true
+
+output:
+  - platform: gpio
+    pin: 25
+    id: pool_acid_pump_output
+
+wifi:
+  ssid: "YOUR_SSID"
+  password: "YOUR_PASSWORD"
+
+logger:
+  level: DEBUG
+
+api:
+
+ota:
+
+custom_component:
+  - lambda: |-
+      auto config = new pool_controller::PoolConfigComponent();
+      App.register_component(config);
+      id(pool_config) = config;
+
+      auto probe = new pool_controller::AtlasEzoPhSensor(0x63);
+      App.register_component(probe);
+      id(pool_ph_sensor) = probe;
+
+      auto controller = new pool_controller::PoolPhController(config, probe, id(pool_pump_switch));
+      App.register_component(controller);
+      id(pool_ph_controller) = controller;
+
+      return {config, probe, controller};
+
+sensor:
+  - platform: custom
+    lambda: |-
+      return {id(pool_ph_sensor)};
+    sensors:
+      - name: "Pool pH"
+        unit_of_measurement: "pH"
+        icon: "mdi:flask"
+
+template:
+  - number:
+      name: "Pool Target pH"
+      id: pool_target_ph
+      icon: "mdi:target"
+      min_value: 6.0
+      max_value: 9.0
+      step: 0.05
+      update_interval: 10s
+      lambda: |-
+        return id(pool_config)->get_target_ph();
+      set_action:
+        - lambda: |-
+            id(pool_config)->set_target_ph(x);
+
+  - number:
+      name: "Pool Volume"
+      id: pool_volume_liters
+      icon: "mdi:pool"
+      unit_of_measurement: "L"
+      min_value: 100.0
+      max_value: 500000.0
+      step: 10.0
+      update_interval: 10s
+      lambda: |-
+        return id(pool_config)->get_pool_volume_liters();
+      set_action:
+        - lambda: |-
+            id(pool_config)->set_pool_volume_liters(x);
+
+  - number:
+      name: "Pool Hardness"
+      id: pool_hardness
+      icon: "mdi:water-percent"
+      unit_of_measurement: "mg/L"
+      min_value: 0.0
+      max_value: 1000.0
+      step: 1.0
+      update_interval: 10s
+      lambda: |-
+        return id(pool_config)->get_hardness_mg_l();
+      set_action:
+        - lambda: |-
+            id(pool_config)->set_hardness_mg_l(x);
+
+  - number:
+      name: "Acid Type Index"
+      id: pool_acid_type
+      icon: "mdi:beaker"
+      min_value: 0.0
+      max_value: 2.0
+      step: 1.0
+      update_interval: 10s
+      lambda: |-
+        return static_cast<float>(static_cast<int>(id(pool_config)->get_acid_type()));
+      set_action:
+        - lambda: |-
+            id(pool_config)->set_acid_type(static_cast<pool_controller::AcidType>(static_cast<int>(x + 0.5f)));
+
+  - number:
+      name: "Acid Strength"
+      id: pool_acid_strength
+      icon: "mdi:flask"
+      unit_of_measurement: "%"
+      min_value: 1.0
+      max_value: 100.0
+      step: 0.1
+      update_interval: 10s
+      lambda: |-
+        return id(pool_config)->get_acid_strength_percent();
+      set_action:
+        - lambda: |-
+            id(pool_config)->set_acid_strength_percent(x);
+
+  - number:
+      name: "Dosing Pump Flowrate"
+      id: pool_dosing_flowrate
+      icon: "mdi:water-pump"
+      unit_of_measurement: "mL/min"
+      min_value: 1.0
+      max_value: 500.0
+      step: 1.0
+      update_interval: 10s
+      lambda: |-
+        return id(pool_config)->get_dosing_flowrate_ml_per_min();
+      set_action:
+        - lambda: |-
+            id(pool_config)->set_dosing_flowrate_ml_per_min(x);
+
+  - number:
+      name: "Maximum Acid Per Day"
+      id: pool_max_acid_per_day
+      icon: "mdi:calendar-clock"
+      unit_of_measurement: "mL"
+      min_value: 0.0
+      max_value: 10000.0
+      step: 1.0
+      update_interval: 10s
+      lambda: |-
+        return id(pool_config)->get_max_acid_ml_per_day();
+      set_action:
+        - lambda: |-
+            id(pool_config)->set_max_acid_ml_per_day(x);
+
+  - switch:
+      name: "Acid Dosing Enabled"
+      id: pool_acid_dosing_enabled
+      icon: "mdi:shield-check"
+      optimistic: false
+      lambda: |-
+        return id(pool_config)->is_acid_dosing_enabled();
+      turn_on_action:
+        - lambda: |-
+            id(pool_config)->set_acid_dosing_enabled(true);
+      turn_off_action:
+        - lambda: |-
+            id(pool_config)->set_acid_dosing_enabled(false);
+
+  - switch:
+      name: "Pump Manual Disabled"
+      id: pool_pump_manual_disabled
+      icon: "mdi:hand"
+      optimistic: false
+      lambda: |-
+        return id(pool_config)->is_pump_manual_disabled();
+      turn_on_action:
+        - lambda: |-
+            id(pool_config)->set_pump_manual_disabled(true);
+      turn_off_action:
+        - lambda: |-
+            id(pool_config)->set_pump_manual_disabled(false);
+
+switch:
+  - platform: output
+    output: pool_acid_pump_output
+    id: pool_pump_switch
+    name: "Pool Acid Dosing Pump"
+    icon: "mdi:water-pump"
+
+text_sensor:
+  - platform: template
+    name: "Pool Acid Dosing Status"
+    lambda: |-
+      if (id(pool_config)->is_pump_manual_disabled()) {
+        return "Manual disable";
+      }
+      if (id(pool_ph_controller)->is_error_disabled()) {
+        return "Error disabled";
+      }
+      return id(pool_pump_switch)->state ? "Dosing" : "Idle";
