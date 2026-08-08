@@ -1,8 +1,9 @@
 #include "config.h"
 
-#include <Preferences.h>
+#include <esphome/core/preferences.h>
 #include <algorithm>
 
+namespace esphome {
 namespace pool_controller {
 
 PoolConfigComponent::PoolConfigComponent() = default;
@@ -129,3 +130,4 @@ void PoolConfigComponent::save_config() {
 
 
 }  // namespace pool_controller
+}
