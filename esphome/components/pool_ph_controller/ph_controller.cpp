@@ -1,7 +1,5 @@
 #include "ph_controller.h"
 
-#include <algorithm>
-
 namespace pool_controller {
 
 PoolPhController::PoolPhController(PoolConfigComponent *config, AtlasEzoPhSensor *probe, switch_::Switch *pump, unsigned long update_interval_ms)
@@ -77,7 +75,9 @@ void PoolPhController::control_ph() {
 
   const float acid_ml_needed = this->config_->calculate_acid_ml_needed(current_ph);
   const float used_today_ml = this->get_daily_acid_used_ml();
-  const float remaining_ml = std::max(0.0f, this->config_->get_max_acid_ml_per_day() - used_today_ml);
+  const float remaining_ml = (this->config_->get_max_acid_ml_per_day() - used_today_ml > 0.0f)
+      ? this->config_->get_max_acid_ml_per_day() - used_today_ml
+      : 0.0f;
 
   if (acid_ml_needed <= 0.0f || remaining_ml <= 0.0f) {
     if (this->pump_->is_on()) {
@@ -86,7 +86,7 @@ void PoolPhController::control_ph() {
     return;
   }
 
-  const float deliverable_ml = std::min(acid_ml_needed, remaining_ml);
+  const float deliverable_ml = (acid_ml_needed < remaining_ml) ? acid_ml_needed : remaining_ml;
   const float dosing_minutes = this->config_->calculate_dosing_time_minutes(deliverable_ml);
   const unsigned long dosing_ms = static_cast<unsigned long>(dosing_minutes * 60000.0f);
 
@@ -108,7 +108,5 @@ void PoolPhController::control_ph() {
     this->pump_->turn_off();
   }
 }
-
-}  // namespace pool_controller
 
 }  // namespace pool_controller
