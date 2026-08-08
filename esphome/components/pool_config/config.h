@@ -1,6 +1,6 @@
 #pragma once
 
-#include "component.h"
+#include <esphome/core/component.h>
 #include <algorithm>
 #include <esphome/core/preferences.h>
 
