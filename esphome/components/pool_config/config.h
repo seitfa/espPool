@@ -1,9 +1,10 @@
 #pragma once
 
-#include "esphome.h"
+#include "component.h"
 #include <algorithm>
-#include <Preferences.h>
+#include <esphome/core/preferences.h>
 
+namespace esphome {
 namespace pool_controller {
 
 enum class AcidType : uint8_t {
@@ -92,3 +93,4 @@ class PoolConfigComponent : public Component {
 };
 
 }  // namespace pool_controller
+}
