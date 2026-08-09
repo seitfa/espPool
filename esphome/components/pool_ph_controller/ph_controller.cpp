@@ -5,6 +5,7 @@
 
 #include <algorithm>
 
+namespace esphome {
 namespace pool_controller {
 
 PoolPhController::PoolPhController(unsigned long update_interval_ms)
@@ -193,3 +194,4 @@ void PoolPhController::set_pump_switch(switch_::Switch *pump) {
 }
 
 }  // namespace pool_controller
+}

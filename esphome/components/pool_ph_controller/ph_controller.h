@@ -2,6 +2,7 @@
 
 #include "esphome.h"
 
+namespace esphome {
 namespace pool_controller {
 
 class PoolPhController : public PollingComponent {
@@ -81,3 +82,5 @@ class PoolPhController : public PollingComponent {
 };
 
 }  // namespace pool_controller
+}
+  
