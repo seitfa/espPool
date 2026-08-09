@@ -5,22 +5,15 @@ esphome:
 
 external_components:
   - source: local
-    path: custom_components/pool_config
-  - source: local
     path: custom_components/atlas_ezo_ph
   - source: local
     path: custom_components/pool_ph_controller
 
 includes:
-  - custom_components/pool_config/config.h
   - custom_components/atlas_ezo_ph/atlas_ezo_ph.h
   - custom_components/pool_ph_controller/ph_controller.h
 
 globals:
-  - id: pool_config
-    type: pool_controller::PoolConfigComponent *
-    restore_value: no
-    initial_value: 'nullptr'
   - id: pool_ph_sensor
     type: pool_controller::AtlasEzoPhSensor *
     restore_value: no
@@ -55,22 +48,25 @@ api:
 
 ota:
 
-custom_component:
-  - lambda: |-
-      auto config = new pool_controller::PoolConfigComponent();
-      App.register_component(config);
-      id(pool_config) = config;
+# Create and register the Atlas probe via YAML
+atlas_ezo_ph:
+  - id: pool_ph_sensor
+    address: 0x63
+    update_interval: 15000
 
-      auto probe = new pool_controller::AtlasEzoPhSensor(0x63);
-      App.register_component(probe);
-      id(pool_ph_sensor) = probe;
+# PH controller component - exposes sensors/binary sensors itself
+pool_ph_controller:
+  - id: pool_ph_controller
+    update_interval: 15000
+    pump_switch: pool_pump_switch
+    current_ph_sensor:
+      name: "Pool Controller Current pH"
+    acid_dosing_binary_sensor:
+      name: "Pool Acid Dosing Enabled"
+    pump_manual_disabled_binary_sensor:
+      name: "Pool Pump Manual Disabled"
 
-      auto controller = new pool_controller::PoolPhController(config, probe, id(pool_pump_switch));
-      App.register_component(controller);
-      id(pool_ph_controller) = controller;
-
-      return {config, probe, controller};
-
+# Bridge the hardware probe sensor to the controller by publishing probe readings into the controller
 sensor:
   - platform: custom
     lambda: |-
@@ -79,6 +75,10 @@ sensor:
       - name: "Pool pH"
         unit_of_measurement: "pH"
         icon: "mdi:flask"
+        on_value:
+          then:
+            - lambda: |-
+                id(pool_ph_controller)->set_current_ph(x);
 
 template:
   - number:
@@ -90,10 +90,10 @@ template:
       step: 0.05
       update_interval: 10s
       lambda: |-
-        return id(pool_config)->get_target_ph();
+        return id(pool_ph_controller)->get_target_ph();
       set_action:
         - lambda: |-
-            id(pool_config)->set_target_ph(x);
+            id(pool_ph_controller)->set_target_ph(x);
 
   - number:
       name: "Pool Volume"
@@ -105,10 +105,10 @@ template:
       step: 10.0
       update_interval: 10s
       lambda: |-
-        return id(pool_config)->get_pool_volume_liters();
+        return id(pool_ph_controller)->get_pool_volume_liters();
       set_action:
         - lambda: |-
-            id(pool_config)->set_pool_volume_liters(x);
+            id(pool_ph_controller)->set_pool_volume_liters(x);
 
   - number:
       name: "Pool Hardness"
@@ -120,10 +120,10 @@ template:
       step: 1.0
       update_interval: 10s
       lambda: |-
-        return id(pool_config)->get_hardness_mg_l();
+        return id(pool_ph_controller)->get_hardness_mg_l();
       set_action:
         - lambda: |-
-            id(pool_config)->set_hardness_mg_l(x);
+            id(pool_ph_controller)->set_hardness_mg_l(x);
 
   - number:
       name: "Acid Type Index"
@@ -133,11 +133,12 @@ template:
       max_value: 2.0
       step: 1.0
       update_interval: 10s
+      # Acid type removed from example; configure acid type in the controller code if needed
       lambda: |-
-        return static_cast<float>(static_cast<int>(id(pool_config)->get_acid_type()));
+        return 0.0;
       set_action:
         - lambda: |-
-            id(pool_config)->set_acid_type(static_cast<pool_controller::AcidType>(static_cast<int>(x + 0.5f)));
+            (void)x;  # no-op
 
   - number:
       name: "Acid Strength"
@@ -149,10 +150,10 @@ template:
       step: 0.1
       update_interval: 10s
       lambda: |-
-        return id(pool_config)->get_acid_strength_percent();
+        return id(pool_ph_controller)->get_acid_strength_percent();
       set_action:
         - lambda: |-
-            id(pool_config)->set_acid_strength_percent(x);
+            id(pool_ph_controller)->set_acid_strength_percent(x);
 
   - number:
       name: "Dosing Pump Flowrate"
@@ -164,10 +165,10 @@ template:
       step: 1.0
       update_interval: 10s
       lambda: |-
-        return id(pool_config)->get_dosing_flowrate_ml_per_min();
+        return id(pool_ph_controller)->get_dosing_flowrate_ml_per_min();
       set_action:
         - lambda: |-
-            id(pool_config)->set_dosing_flowrate_ml_per_min(x);
+            id(pool_ph_controller)->set_dosing_flowrate_ml_per_min(x);
 
   - number:
       name: "Maximum Acid Per Day"
@@ -179,10 +180,10 @@ template:
       step: 1.0
       update_interval: 10s
       lambda: |-
-        return id(pool_config)->get_max_acid_ml_per_day();
+        return id(pool_ph_controller)->get_max_acid_ml_per_day();
       set_action:
         - lambda: |-
-            id(pool_config)->set_max_acid_ml_per_day(x);
+            id(pool_ph_controller)->set_max_acid_ml_per_day(x);
 
   - switch:
       name: "Acid Dosing Enabled"
@@ -190,13 +191,13 @@ template:
       icon: "mdi:shield-check"
       optimistic: false
       lambda: |-
-        return id(pool_config)->is_acid_dosing_enabled();
+        return id(pool_ph_controller)->is_acid_dosing_enabled();
       turn_on_action:
         - lambda: |-
-            id(pool_config)->set_acid_dosing_enabled(true);
+            id(pool_ph_controller)->set_acid_dosing_enabled(true);
       turn_off_action:
         - lambda: |-
-            id(pool_config)->set_acid_dosing_enabled(false);
+            id(pool_ph_controller)->set_acid_dosing_enabled(false);
 
   - switch:
       name: "Pump Manual Disabled"
@@ -204,13 +205,13 @@ template:
       icon: "mdi:hand"
       optimistic: false
       lambda: |-
-        return id(pool_config)->is_pump_manual_disabled();
+        return id(pool_ph_controller)->is_pump_manual_disabled();
       turn_on_action:
         - lambda: |-
-            id(pool_config)->set_pump_manual_disabled(true);
+            id(pool_ph_controller)->set_pump_manual_disabled(true);
       turn_off_action:
         - lambda: |-
-            id(pool_config)->set_pump_manual_disabled(false);
+            id(pool_ph_controller)->set_pump_manual_disabled(false);
 
 switch:
   - platform: output
@@ -223,7 +224,7 @@ text_sensor:
   - platform: template
     name: "Pool Acid Dosing Status"
     lambda: |-
-      if (id(pool_config)->is_pump_manual_disabled()) {
+      if (id(pool_ph_controller)->is_pump_manual_disabled()) {
         return "Manual disable";
       }
       if (id(pool_ph_controller)->is_error_disabled()) {
