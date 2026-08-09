@@ -19,7 +19,7 @@ void PoolPhController::setup() {
 
 void PoolPhController::update() {
   const unsigned long now = millis();
-  if (this->pump_ && this->pump_->is_on()) {
+  if (this->pump_ && this->pump_->state) {
     this->daily_on_ms_ += now - this->last_update_ms_;
   }
   this->reset_daily_usage_if_needed(now);
@@ -53,7 +53,7 @@ void PoolPhController::control_ph() {
   if (current_ph <= 0.0f || current_ph > 14.0f) {
     ESP_LOGW(TAG, "Invalid pH reading %.2f, disabling acid dosing", current_ph);
     this->error_disabled_ = true;
-    if (this->pump_->is_on()) {
+    if (this->pump_->state) {
       this->pump_->turn_off();
     }
     return;
@@ -62,7 +62,7 @@ void PoolPhController::control_ph() {
   this->error_disabled_ = false;
 
   if (!this->acid_dosing_enabled_ || this->pump_manual_disabled_) {
-    if (this->pump_->is_on()) {
+    if (this->pump_->state) {
       this->pump_->turn_off();
     }
     return;
@@ -70,7 +70,7 @@ void PoolPhController::control_ph() {
 
   const float delta_ph = current_ph - this->target_ph_;
   if (delta_ph <= PH_TOLERANCE) {
-    if (this->pump_->is_on()) {
+    if (this->pump_->state) {
       this->pump_->turn_off();
     }
     return;
@@ -86,7 +86,7 @@ void PoolPhController::control_ph() {
   const float remaining_ml = (this->max_acid_ml_per_day_ - used_today_ml > 0.0f) ? this->max_acid_ml_per_day_ - used_today_ml : 0.0f;
 
   if (acid_ml_needed <= 0.0f || remaining_ml <= 0.0f) {
-    if (this->pump_->is_on()) {
+    if (this->pump_->state) {
       this->pump_->turn_off();
     }
     return;
@@ -97,19 +97,19 @@ void PoolPhController::control_ph() {
   const unsigned long dosing_ms = static_cast<unsigned long>(dosing_minutes * 60000.0f);
 
   if (dosing_ms == 0) {
-    if (this->pump_->is_on()) {
+    if (this->pump_->state) {
       this->pump_->turn_off();
     }
     return;
   }
 
-  if (!this->pump_->is_on()) {
+  if (!this->pump_->state) {
     ESP_LOGD(TAG, "Starting acid dosing for %.2f minutes to correct pH %.2f to target %.2f", dosing_minutes, current_ph, this->target_ph_);
     this->pump_->turn_on();
     this->dosing_end_ms_ = now + dosing_ms;
   }
 
-  if (this->pump_->is_on() && now >= this->dosing_end_ms_) {
+  if (this->pump_->state && now >= this->dosing_end_ms_) {
     ESP_LOGD(TAG, "Acid dosing period ended after %.2f minutes", dosing_minutes);
     this->pump_->turn_off();
   }
@@ -163,7 +163,7 @@ void PoolPhController::set_pump_manual_disabled(bool disabled) {
     this->pump_manual_disabled_sensor_->publish_state(disabled);
   }
   // If manual disabled, ensure pump is off
-  if (disabled && this->pump_ && this->pump_->is_on()) {
+  if (disabled && this->pump_ && this->pump_->state) {
     this->pump_->turn_off();
   }
 }
