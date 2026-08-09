@@ -1,4 +1,8 @@
 #include "ph_controller.h"
+
+#include "esphome/core/component.h"
+#include "esphome/components/sensor/sensor.h"
+
 #include <algorithm>
 
 namespace pool_controller {
