@@ -2,8 +2,10 @@
 
 #include "esphome/core/component.h"
 #include "esphome/components/sensor/sensor.h"
+#include "water_chemistry.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace esphome {
 namespace pool_controller {
@@ -76,23 +78,28 @@ void PoolPhController::control_ph() {
     return;
   }
 
-  // Calculate acid needed using the same formula previously in PoolConfigComponent
-  const float hardness_factor = 1.0f + std::max(0.0f, this->hardness_mg_l_ - 100.0f) / 500.0f;
-  const float strength_factor = std::max(0.01f, this->acid_strength_percent_) / 100.0f;
-  const float base_ml_per_liter_per_ph = 0.04f;
-  const float acid_ml_needed = delta_ph * this->pool_volume_liters_ * base_ml_per_liter_per_ph * hardness_factor / strength_factor;
+  const float acid_needed_ml = water_chemistry::WaterChemistry::calculate_acid_needed_ml(
+      this->acid_type_, this->pool_volume_liters_, current_ph, this->target_ph_, this->tac_mg_l_);
 
   const float used_today_ml = this->get_daily_acid_used_ml();
+  // publish computed values to optional sensors
+  if (this->used_today_ml_sensor_) {
+    this->used_today_ml_sensor_->publish_state(used_today_ml);
+  }
+  if (this->acid_ml_needed_sensor_) {
+    this->acid_ml_needed_sensor_->publish_state(acid_needed_ml);
+  }
+
   const float remaining_ml = (this->max_acid_ml_per_day_ - used_today_ml > 0.0f) ? this->max_acid_ml_per_day_ - used_today_ml : 0.0f;
 
-  if (acid_ml_needed <= 0.0f || remaining_ml <= 0.0f) {
+  if (acid_needed_ml <= 0.0f || remaining_ml <= 0.0f) {
     if (this->pump_->state) {
       this->pump_->turn_off();
     }
     return;
   }
 
-  const float deliverable_ml = (acid_ml_needed < remaining_ml) ? acid_ml_needed : remaining_ml;
+  const float deliverable_ml = (acid_needed_ml < remaining_ml) ? acid_needed_ml : remaining_ml;
   const float dosing_minutes = (this->dosing_flowrate_ml_per_min_ > 0.0f) ? (deliverable_ml / this->dosing_flowrate_ml_per_min_) : 0.0f;
   const unsigned long dosing_ms = static_cast<unsigned long>(dosing_minutes * 60000.0f);
 
@@ -122,8 +129,9 @@ void PoolPhController::set_current_ph(float ph) {
   if (this->current_ph_sensor_) {
     this->current_ph_sensor_->publish_state(ph);
   }
-  // React immediately to new reading
-  this->control_ph();
+  // Do not run control logic here. Control is executed from update()
+  // to avoid side-effects during sensor callbacks and to match test
+  // expectations where dosing is triggered only on update().
 }
 
 void PoolPhController::set_target_ph(float target_ph) {
@@ -134,8 +142,12 @@ void PoolPhController::set_pool_volume_liters(float liters) {
   this->pool_volume_liters_ = liters;
 }
 
-void PoolPhController::set_hardness_mg_l(float hardness) {
-  this->hardness_mg_l_ = hardness;
+void PoolPhController::set_tac_mg_l(float tac_mg_l) {
+  this->tac_mg_l_ = tac_mg_l;
+}
+
+void PoolPhController::set_acid_type(water_chemistry::AcidType acid_type) {
+  this->acid_type_ = acid_type;
 }
 
 void PoolPhController::set_acid_strength_percent(float percent) {
@@ -186,6 +198,21 @@ void PoolPhController::set_current_ph_sensor(sensor::Sensor *s) {
   this->current_ph_sensor_ = s;
   if (s) {
     s->publish_state(this->current_ph_);
+  }
+}
+
+void PoolPhController::set_daily_acid_used_ml_sensor(sensor::Sensor *s) {
+  this->used_today_ml_sensor_ = s;
+  if (s) {
+    s->publish_state(this->get_daily_acid_used_ml());
+  }
+}
+
+void PoolPhController::set_acid_ml_needed_sensor(sensor::Sensor *s) {
+  this->acid_ml_needed_sensor_ = s;
+  if (s) {
+    // publish an initial 0; actual computed value will be published during control_ph()
+    s->publish_state(0.0f);
   }
 }
 

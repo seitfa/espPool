@@ -1,6 +1,10 @@
 #pragma once
 
-#include "esphome.h"
+#include "esphome/core/component.h"
+#include "esphome/components/switch/switch.h"
+#include "esphome/components/sensor/sensor.h"
+#include "esphome/components/binary_sensor/binary_sensor.h"
+#include "water_chemistry.h"
 
 namespace esphome {
 namespace pool_controller {
@@ -18,7 +22,8 @@ class PoolPhController : public PollingComponent {
 
   void set_target_ph(float target_ph);
   void set_pool_volume_liters(float liters);
-  void set_hardness_mg_l(float hardness);
+  void set_tac_mg_l(float tac_mg_l);
+  void set_acid_type(water_chemistry::AcidType acid_type);
   void set_acid_strength_percent(float percent);
   void set_dosing_flowrate_ml_per_min(float flowrate);
   void set_max_acid_ml_per_day(float max_ml);
@@ -29,7 +34,8 @@ class PoolPhController : public PollingComponent {
   // Getters for config values (useful for template numbers)
   float get_target_ph() const { return this->target_ph_; }
   float get_pool_volume_liters() const { return this->pool_volume_liters_; }
-  float get_hardness_mg_l() const { return this->hardness_mg_l_; }
+  float get_tac_mg_l() const { return this->tac_mg_l_; }
+  water_chemistry::AcidType get_acid_type() const { return this->acid_type_; }
   float get_acid_strength_percent() const { return this->acid_strength_percent_; }
   float get_dosing_flowrate_ml_per_min() const { return this->dosing_flowrate_ml_per_min_; }
   float get_max_acid_ml_per_day() const { return this->max_acid_ml_per_day_; }
@@ -40,6 +46,8 @@ class PoolPhController : public PollingComponent {
   void set_acid_dosing_binary_sensor(binary_sensor::BinarySensor *b);
   void set_pump_manual_disabled_binary_sensor(binary_sensor::BinarySensor *b);
   void set_current_ph_sensor(sensor::Sensor *s);
+  void set_daily_acid_used_ml_sensor(sensor::Sensor *s);
+  void set_acid_ml_needed_sensor(sensor::Sensor *s);
 
   // Attach pump switch (from YAML using use_id)
   void set_pump_switch(switch_::Switch *pump);
@@ -51,8 +59,9 @@ class PoolPhController : public PollingComponent {
   // configuration values (defaults preserved from previous PoolConfigStorage)
   float target_ph_ = 7.2f;
   float pool_volume_liters_ = 50000.0f;
-  float hardness_mg_l_ = 150.0f;
-  float acid_strength_percent_ = 31.45f;
+  float tac_mg_l_ = 150.0f;
+  water_chemistry::AcidType acid_type_ = water_chemistry::AcidType::SULFURIC_ACID_14_9_PERCENT;
+  float acid_strength_percent_ = 14.9f;
   float dosing_flowrate_ml_per_min_ = 60.0f;
   float max_acid_ml_per_day_ = 2000.0f;
   bool acid_dosing_enabled_ = true;
@@ -72,6 +81,8 @@ class PoolPhController : public PollingComponent {
   binary_sensor::BinarySensor *acid_dosing_enabled_sensor_{nullptr};
   binary_sensor::BinarySensor *pump_manual_disabled_sensor_{nullptr};
   sensor::Sensor *current_ph_sensor_{nullptr};
+  sensor::Sensor *used_today_ml_sensor_{nullptr};
+  sensor::Sensor *acid_ml_needed_sensor_{nullptr};
 
   static constexpr const char *TAG = "pool_controller.ph";
   static constexpr unsigned long DAY_MS = 24UL * 60UL * 60UL * 1000UL;
