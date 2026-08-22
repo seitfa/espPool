@@ -14,5 +14,10 @@
   ],
   "frameworks": ["arduino"],
   "platforms": ["espressif32"],
-  "include": "esphome/components/pool_lib"
+  "export": {
+    "include":
+    [
+        "lib/*"
+    ]
+}
 }
