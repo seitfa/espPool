@@ -2,7 +2,7 @@
 
 #include "esphome/core/component.h"
 #include "esphome/components/sensor/sensor.h"
-#include "water_chemistry.h"
+#include "esphome/lib/water_chemistry.h"
 
 #include <algorithm>
 #include <cmath>
