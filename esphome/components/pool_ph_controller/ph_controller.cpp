@@ -2,7 +2,7 @@
 
 #include "esphome/core/component.h"
 #include "esphome/components/sensor/sensor.h"
-#include "esphome/components/pool_lib/water_chemistry.h"
+#include "esphome/components/pool_lib/pool_chemistry.h"
 
 #include <algorithm>
 #include <cmath>
@@ -78,7 +78,7 @@ void PoolPhController::control_ph() {
     return;
   }
 
-  const float acid_needed_ml = water_chemistry::WaterChemistry::calculate_acid_needed_ml(
+  const float acid_needed_ml = pool_chemistry::PoolChemistry::calculate_acid_needed_ml(
       this->acid_type_, this->pool_volume_liters_, current_ph, this->target_ph_, this->tac_mg_l_);
 
   const float used_today_ml = this->get_daily_acid_used_ml();
@@ -146,7 +146,7 @@ void PoolPhController::set_tac_mg_l(float tac_mg_l) {
   this->tac_mg_l_ = tac_mg_l;
 }
 
-void PoolPhController::set_acid_type(water_chemistry::AcidType acid_type) {
+void PoolPhController::set_acid_type(pool_chemistry::AcidType acid_type) {
   this->acid_type_ = acid_type;
 }
 

@@ -4,7 +4,7 @@
 #include "esphome/components/switch/switch.h"
 #include "esphome/components/sensor/sensor.h"
 #include "esphome/components/binary_sensor/binary_sensor.h"
-#include "esphome/components/pool_lib/water_chemistry.h"
+#include "esphome/components/pool_lib/pool_chemistry.h"
 
 namespace esphome {
 namespace pool_controller {
@@ -23,7 +23,7 @@ class PoolPhController : public PollingComponent {
   void set_target_ph(float target_ph);
   void set_pool_volume_liters(float liters);
   void set_tac_mg_l(float tac_mg_l);
-  void set_acid_type(water_chemistry::AcidType acid_type);
+  void set_acid_type(pool_chemistry::AcidType acid_type);
   void set_acid_strength_percent(float percent);
   void set_dosing_flowrate_ml_per_min(float flowrate);
   void set_max_acid_ml_per_day(float max_ml);
@@ -35,7 +35,7 @@ class PoolPhController : public PollingComponent {
   float get_target_ph() const { return this->target_ph_; }
   float get_pool_volume_liters() const { return this->pool_volume_liters_; }
   float get_tac_mg_l() const { return this->tac_mg_l_; }
-  water_chemistry::AcidType get_acid_type() const { return this->acid_type_; }
+  pool_chemistry::AcidType get_acid_type() const { return this->acid_type_; }
   float get_acid_strength_percent() const { return this->acid_strength_percent_; }
   float get_dosing_flowrate_ml_per_min() const { return this->dosing_flowrate_ml_per_min_; }
   float get_max_acid_ml_per_day() const { return this->max_acid_ml_per_day_; }
@@ -60,7 +60,7 @@ class PoolPhController : public PollingComponent {
   float target_ph_ = 7.2f;
   float pool_volume_liters_ = 50000.0f;
   float tac_mg_l_ = 150.0f;
-  water_chemistry::AcidType acid_type_ = water_chemistry::AcidType::SULFURIC_ACID_14_9_PERCENT;
+  pool_chemistry::AcidType acid_type_ = pool_chemistry::AcidType::SULFURIC_ACID_14_9_PERCENT;
   float acid_strength_percent_ = 14.9f;
   float dosing_flowrate_ml_per_min_ = 60.0f;
   float max_acid_ml_per_day_ = 2000.0f;
