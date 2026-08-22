@@ -1,18 +1,16 @@
 #include <unity.h>
-#include "my_custom_sensor.h"
+
 #include "ph_controller.h"
 #include "esphome/core/hal.h"
 #include "esphome/components/gpio/gpio_switch.h"
 #include "esphome/core/component.h"
 
-MyCustomSensor sensor;
 esphome::pool_controller::PoolPhController ph_controller;
 esphome::sensor::Sensor *ph_sensor, *used_today_sensor, *acid_needed_sensor;
 esphome::InternalGPIOPin *ph_dosing_pump_pin;
 esphome::gpio::GPIOSwitch *ph_dosing_pump;
 
 void setUp(void) {
-    sensor = MyCustomSensor();
     
     ph_sensor = new esphome::sensor::Sensor();
     used_today_sensor = new esphome::sensor::Sensor();
@@ -36,16 +34,6 @@ void setUp(void) {
 }
 
 void tearDown(void) {}
-
-void test_calculation_logic(void) {
-    float result = sensor.calculate_linear_value(10.0f);
-    TEST_ASSERT_EQUAL_FLOAT(50.0f, result); // 10 * 1.8 + 32 = 50
-}
-
-void test_publish_state(void) {
-    sensor.update_logic(0.0f);
-    TEST_ASSERT_EQUAL_FLOAT(32.0f, sensor.state);
-}
 
 void test_ph_dosing(void) {
 
@@ -84,8 +72,6 @@ void test_ph_dosing(void) {
 
 int main(int argc, char **argv) {
     UNITY_BEGIN();
-    RUN_TEST(test_calculation_logic);
-    RUN_TEST(test_publish_state);
     RUN_TEST(test_ph_dosing);
     return UNITY_END();
 }
