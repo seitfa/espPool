@@ -5,7 +5,7 @@
 #include <cstdint>
 
 namespace esphome {
-namespace pool_chemistry {
+namespace pool_controller {
 
 enum class AcidType : uint8_t {
   SULFURIC_ACID_14_9_PERCENT = 0,
@@ -26,5 +26,5 @@ class PoolChemistry {
   static float get_acid_concentration(AcidType acid_type);
 };
 
-}  // namespace pool_chemistry
+}  // namespace pool_controller
 }  // namespace esphome

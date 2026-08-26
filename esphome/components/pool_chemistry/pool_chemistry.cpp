@@ -1,7 +1,7 @@
 #include "pool_chemistry.h"
 
 namespace esphome {
-namespace pool_chemistry {
+namespace pool_controller {
 
 float PoolChemistry::calculate_acid_needed_ml(AcidType acid_type,
                                               float water_volume_liters,
@@ -75,5 +75,5 @@ float PoolChemistry::get_acid_concentration(AcidType acid_type) {
   }
 }
 
-}  // namespace pool_chemistry
+}  // namespace pool_controller
 }  // namespace esphome
