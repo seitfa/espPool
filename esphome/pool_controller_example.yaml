@@ -63,8 +63,6 @@ pool_ph_controller:
       name: "Pool Controller Current pH"
     acid_dosing_binary_sensor:
       name: "Pool Acid Dosing Enabled"
-    pump_manual_disabled_binary_sensor:
-      name: "Pool Pump Manual Disabled"
 
 # Bridge the hardware probe sensor to the controller by publishing probe readings into the controller
 sensor:
@@ -105,14 +103,14 @@ template:
       step: 10.0
       update_interval: 10s
       lambda: |-
-        return id(pool_ph_controller)->get_pool_volume_liters();
+        return id(pool_ph_controller)->get_pool_volume();
       set_action:
         - lambda: |-
-            id(pool_ph_controller)->set_pool_volume_liters(x);
+            id(pool_ph_controller)->set_pool_volume(x);
 
   - number:
-      name: "Pool Hardness"
-      id: pool_hardness
+      name: "TAC"
+      id: pool_tac
       icon: "mdi:water-percent"
       unit_of_measurement: "mg/L"
       min_value: 0.0
@@ -120,25 +118,10 @@ template:
       step: 1.0
       update_interval: 10s
       lambda: |-
-        return id(pool_ph_controller)->get_hardness_mg_l();
+        return id(pool_ph_controller)->get_tac();
       set_action:
         - lambda: |-
-            id(pool_ph_controller)->set_hardness_mg_l(x);
-
-  - number:
-      name: "Acid Type Index"
-      id: pool_acid_type
-      icon: "mdi:beaker"
-      min_value: 0.0
-      max_value: 2.0
-      step: 1.0
-      update_interval: 10s
-      # Acid type removed from example; configure acid type in the controller code if needed
-      lambda: |-
-        return 0.0;
-      set_action:
-        - lambda: |-
-            (void)x;  # no-op
+            id(pool_ph_controller)->set_tac(x);
 
   - number:
       name: "Acid Strength"
@@ -165,10 +148,10 @@ template:
       step: 1.0
       update_interval: 10s
       lambda: |-
-        return id(pool_ph_controller)->get_dosing_flowrate_ml_per_min();
+        return id(pool_ph_controller)->get_dosing_flowrate();
       set_action:
         - lambda: |-
-            id(pool_ph_controller)->set_dosing_flowrate_ml_per_min(x);
+            id(pool_ph_controller)->set_dosing_flowrate(x);
 
   - number:
       name: "Maximum Acid Per Day"
@@ -180,10 +163,10 @@ template:
       step: 1.0
       update_interval: 10s
       lambda: |-
-        return id(pool_ph_controller)->get_max_acid_ml_per_day();
+        return id(pool_ph_controller)->get_max_acid();
       set_action:
         - lambda: |-
-            id(pool_ph_controller)->set_max_acid_ml_per_day(x);
+            id(pool_ph_controller)->set_max_acid(x);
 
   - switch:
       name: "Acid Dosing Enabled"
@@ -199,20 +182,6 @@ template:
         - lambda: |-
             id(pool_ph_controller)->set_acid_dosing_enabled(false);
 
-  - switch:
-      name: "Pump Manual Disabled"
-      id: pool_pump_manual_disabled
-      icon: "mdi:hand"
-      optimistic: false
-      lambda: |-
-        return id(pool_ph_controller)->is_pump_manual_disabled();
-      turn_on_action:
-        - lambda: |-
-            id(pool_ph_controller)->set_pump_manual_disabled(true);
-      turn_off_action:
-        - lambda: |-
-            id(pool_ph_controller)->set_pump_manual_disabled(false);
-
 switch:
   - platform: output
     output: pool_acid_pump_output
@@ -224,9 +193,6 @@ text_sensor:
   - platform: template
     name: "Pool Acid Dosing Status"
     lambda: |-
-      if (id(pool_ph_controller)->is_pump_manual_disabled()) {
-        return "Manual disable";
-      }
       if (id(pool_ph_controller)->is_error_disabled()) {
         return "Error disabled";
       }

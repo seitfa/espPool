@@ -27,6 +27,7 @@ void PoolPhController::update() {
   }
   this->reset_daily_usage_if_needed(now);
   this->control_ph();
+  this->publish_internal_state_sensors();
   this->last_update_ms_ = now;
 }
 
@@ -43,6 +44,42 @@ void PoolPhController::reset_daily_usage_if_needed(unsigned long now) {
   if (now - this->last_daily_reset_ms_ >= DAY_MS) {
     this->daily_on_ms_ = 0;
     this->last_daily_reset_ms_ = now;
+  }
+}
+
+void PoolPhController::publish_internal_state_sensors() {
+  if (this->target_ph_sensor_) {
+    this->target_ph_sensor_->publish_state(this->target_ph_);
+  }
+  if (this->pool_volume_sensor_) {
+    this->pool_volume_sensor_->publish_state(this->pool_volume_liters_);
+  }
+  if (this->tac_sensor_) {
+    this->tac_sensor_->publish_state(this->tac_mg_l_);
+  }
+  if (this->acid_strength_sensor_) {
+    this->acid_strength_sensor_->publish_state(this->acid_strength_percent_);
+  }
+  if (this->dosing_flowrate_sensor_) {
+    this->dosing_flowrate_sensor_->publish_state(this->dosing_flowrate_ml_per_min_);
+  }
+  if (this->max_acid_sensor_) {
+    this->max_acid_sensor_->publish_state(this->max_acid_ml_per_day_);
+  }
+  if (this->acid_dosing_enabled_sensor_) {
+    this->acid_dosing_enabled_sensor_->publish_state(this->acid_dosing_enabled_);
+  }
+  if (this->pool_pump_running_sensor_) {
+    this->pool_pump_running_sensor_->publish_state(this->pool_pump_running_);
+  }
+  if (this->mixing_delay_sensor_) {
+    this->mixing_delay_sensor_->publish_state(this->mixing_delay_minutes_);
+  }
+  if (this->current_ph_sensor_) {
+    this->current_ph_sensor_->publish_state(this->current_ph_);
+  }
+  if (this->used_today_ml_sensor_) {
+    this->used_today_ml_sensor_->publish_state(this->get_daily_acid_used_ml());
   }
 }
 
@@ -64,7 +101,7 @@ void PoolPhController::control_ph() {
 
   this->error_disabled_ = false;
 
-  if (!this->acid_dosing_enabled_ || this->pump_manual_disabled_) {
+  if (!this->acid_dosing_enabled_) {
     if (this->pump_->state) {
       this->pump_->turn_off();
     }
@@ -103,6 +140,7 @@ void PoolPhController::control_ph() {
   const float deliverable_ml = (acid_needed_ml < remaining_ml) ? acid_needed_ml : remaining_ml;
   const float dosing_minutes = (this->dosing_flowrate_ml_per_min_ > 0.0f) ? (deliverable_ml / this->dosing_flowrate_ml_per_min_) : 0.0f;
   const unsigned long dosing_ms = static_cast<unsigned long>(dosing_minutes * 60000.0f);
+  const unsigned long mixing_delay_ms = static_cast<unsigned long>(this->mixing_delay_minutes_ * 60000.0f);
 
   if (dosing_ms == 0) {
     if (this->pump_->state) {
@@ -111,15 +149,27 @@ void PoolPhController::control_ph() {
     return;
   }
 
-  if (!this->pump_->state) {
-    ESP_LOGD(TAG, "Starting acid dosing for %.2f minutes to correct pH %.2f to target %.2f", dosing_minutes, current_ph, this->target_ph_);
-    this->pump_->turn_on();
-    this->dosing_end_ms_ = now + dosing_ms;
-  }
-
   if (this->pump_->state && now >= this->dosing_end_ms_) {
     ESP_LOGD(TAG, "Acid dosing period ended after %.2f minutes", dosing_minutes);
     this->pump_->turn_off();
+    this->last_dosing_end_ms_ = now;
+    return;
+  }
+
+  const bool pump_running_long_enough = this->pool_pump_running_ &&
+                                        (this->pool_pump_started_ms_ != 0) &&
+                                        (now - this->pool_pump_started_ms_ >= mixing_delay_ms);
+  const bool enough_time_since_last_dose = this->last_dosing_end_ms_ == 0 ||
+                                          (now - this->last_dosing_end_ms_ >= mixing_delay_ms);
+
+  if (!this->pump_->state) {
+    if (!this->pool_pump_running_ || !pump_running_long_enough || !enough_time_since_last_dose) {
+      return;
+    }
+    ESP_LOGD(TAG, "Starting acid dosing for %.2f minutes to correct pH %.2f to target %.2f", dosing_minutes, current_ph, this->target_ph_);
+    this->pump_->turn_on();
+    this->last_dosing_started_ms_ = now;
+    this->dosing_end_ms_ = now + dosing_ms;
   }
 }
 
@@ -137,14 +187,23 @@ void PoolPhController::set_current_ph(float ph) {
 
 void PoolPhController::set_target_ph(float target_ph) {
   this->target_ph_ = target_ph;
+  if (this->target_ph_sensor_) {
+    this->target_ph_sensor_->publish_state(target_ph);
+  }
 }
 
-void PoolPhController::set_pool_volume_liters(float liters) {
+void PoolPhController::set_pool_volume(float liters) {
   this->pool_volume_liters_ = liters;
+  if (this->pool_volume_sensor_) {
+    this->pool_volume_sensor_->publish_state(liters);
+  }
 }
 
-void PoolPhController::set_tac_mg_l(float tac_mg_l) {
-  this->tac_mg_l_ = tac_mg_l;
+void PoolPhController::set_tac(float tac) {
+  this->tac_mg_l_ = tac;
+  if (this->tac_sensor_) {
+    this->tac_sensor_->publish_state(tac);
+  }
 }
 
 void PoolPhController::set_acid_type(pool_chemistry::AcidType acid_type) {
@@ -153,14 +212,23 @@ void PoolPhController::set_acid_type(pool_chemistry::AcidType acid_type) {
 
 void PoolPhController::set_acid_strength_percent(float percent) {
   this->acid_strength_percent_ = percent;
+  if (this->acid_strength_sensor_) {
+    this->acid_strength_sensor_->publish_state(percent);
+  }
 }
 
-void PoolPhController::set_dosing_flowrate_ml_per_min(float flowrate) {
+void PoolPhController::set_dosing_flowrate(float flowrate) {
   this->dosing_flowrate_ml_per_min_ = flowrate;
+  if (this->dosing_flowrate_sensor_) {
+    this->dosing_flowrate_sensor_->publish_state(flowrate);
+  }
 }
 
-void PoolPhController::set_max_acid_ml_per_day(float max_ml) {
+void PoolPhController::set_max_acid(float max_ml) {
   this->max_acid_ml_per_day_ = max_ml;
+  if (this->max_acid_sensor_) {
+    this->max_acid_sensor_->publish_state(max_ml);
+  }
 }
 
 void PoolPhController::set_acid_dosing_enabled(bool enabled) {
@@ -170,14 +238,27 @@ void PoolPhController::set_acid_dosing_enabled(bool enabled) {
   }
 }
 
-void PoolPhController::set_pump_manual_disabled(bool disabled) {
-  this->pump_manual_disabled_ = disabled;
-  if (this->pump_manual_disabled_sensor_) {
-    this->pump_manual_disabled_sensor_->publish_state(disabled);
+void PoolPhController::set_pool_pump_running(bool running) {
+  if (this->pool_pump_running_ != running) {
+    this->pool_pump_running_ = running;
+    if (running) {
+      this->pool_pump_started_ms_ = millis();
+    } else {
+      this->pool_pump_started_ms_ = 0;
+    }
+  } else if (running && this->pool_pump_started_ms_ == 0) {
+    this->pool_pump_started_ms_ = millis();
   }
-  // If manual disabled, ensure pump is off
-  if (disabled && this->pump_ && this->pump_->state) {
-    this->pump_->turn_off();
+
+  if (this->pool_pump_running_sensor_) {
+    this->pool_pump_running_sensor_->publish_state(running);
+  }
+}
+
+void PoolPhController::set_mixing_delay(float minutes) {
+  this->mixing_delay_minutes_ = minutes;
+  if (this->mixing_delay_sensor_) {
+    this->mixing_delay_sensor_->publish_state(minutes);
   }
 }
 
@@ -188,10 +269,17 @@ void PoolPhController::set_acid_dosing_binary_sensor(binary_sensor::BinarySensor
   }
 }
 
-void PoolPhController::set_pump_manual_disabled_binary_sensor(binary_sensor::BinarySensor *b) {
-  this->pump_manual_disabled_sensor_ = b;
+void PoolPhController::set_pool_pump_running_sensor(binary_sensor::BinarySensor *b) {
+  this->pool_pump_running_sensor_ = b;
   if (b) {
-    b->publish_state(this->pump_manual_disabled_);
+    b->publish_state(this->pool_pump_running_);
+  }
+}
+
+void PoolPhController::set_mixing_delay_sensor(sensor::Sensor *s) {
+  this->mixing_delay_sensor_ = s;
+  if (s) {
+    s->publish_state(this->mixing_delay_minutes_);
   }
 }
 
@@ -199,6 +287,48 @@ void PoolPhController::set_current_ph_sensor(sensor::Sensor *s) {
   this->current_ph_sensor_ = s;
   if (s) {
     s->publish_state(this->current_ph_);
+  }
+}
+
+void PoolPhController::set_target_ph_sensor(sensor::Sensor *s) {
+  this->target_ph_sensor_ = s;
+  if (s) {
+    s->publish_state(this->target_ph_);
+  }
+}
+
+void PoolPhController::set_pool_volume_sensor(sensor::Sensor *s) {
+  this->pool_volume_sensor_ = s;
+  if (s) {
+    s->publish_state(this->pool_volume_liters_);
+  }
+}
+
+void PoolPhController::set_tac_sensor(sensor::Sensor *s) {
+  this->tac_sensor_ = s;
+  if (s) {
+    s->publish_state(this->tac_mg_l_);
+  }
+}
+
+void PoolPhController::set_acid_strength_sensor(sensor::Sensor *s) {
+  this->acid_strength_sensor_ = s;
+  if (s) {
+    s->publish_state(this->acid_strength_percent_);
+  }
+}
+
+void PoolPhController::set_dosing_flowrate_sensor(sensor::Sensor *s) {
+  this->dosing_flowrate_sensor_ = s;
+  if (s) {
+    s->publish_state(this->dosing_flowrate_ml_per_min_);
+  }
+}
+
+void PoolPhController::set_max_acid_sensor(sensor::Sensor *s) {
+  this->max_acid_sensor_ = s;
+  if (s) {
+    s->publish_state(this->max_acid_ml_per_day_);
   }
 }
 
