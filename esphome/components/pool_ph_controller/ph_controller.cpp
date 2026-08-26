@@ -3,7 +3,7 @@
 #include "esphome/core/component.h"
 #include "esphome/components/sensor/sensor.h"
 
-#include "esphome/components/pool_chemistry/pool_chemistry.h"
+#include "pool_chemistry.h"
 
 #include <algorithm>
 #include <cmath>

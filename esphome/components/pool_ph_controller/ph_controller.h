@@ -5,7 +5,7 @@
 #include "esphome/components/sensor/sensor.h"
 #include "esphome/components/binary_sensor/binary_sensor.h"
 
-#include "esphome/components/pool_chemistry/pool_chemistry.h"
+#include "pool_chemistry.h"
 
 namespace esphome {
 namespace pool_controller {
