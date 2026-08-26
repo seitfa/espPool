@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdint>
 
+namespace esphome {
 namespace pool_chemistry {
 
 enum class AcidType : uint8_t {
@@ -26,3 +27,4 @@ class PoolChemistry {
 };
 
 }  // namespace pool_chemistry
+}  // namespace esphome
