@@ -44,7 +44,8 @@ async def to_code(config):
     await cg.register_component(var, config)
 
     if CONF_PUMP_SWITCH in config:
-        cg.add(var.set_pump_switch(config[CONF_PUMP_SWITCH]))
+        pump = await cg.get_variable(config[CONF_PUMP_SWITCH])
+        cg.add(var.set_pump_switch(pump))
 
     if CONF_CURRENT_PH_SENSOR in config:
         sens = await sensor.new_sensor(config[CONF_CURRENT_PH_SENSOR])
