@@ -25,50 +25,27 @@ float PoolChemistry::calculate_acid_needed_ml(AcidType acid_type,
 
   const float needed_mol_h = tac_mmol_l * alkalinity_shift * water_volume_liters / 1000.0f;
 
-  const float acid_equivalents = get_acid_equivalent_factor(acid_type);
-  const float acid_molar_mass = get_acid_molar_mass(acid_type);
-  const float acid_density = get_acid_density(acid_type);
-  const float acid_concentration = get_acid_concentration(acid_type);
-
+  const AcidParam acid = get_acid_param(acid_type);
   const float acid_volume_per_mol_h =
-      acid_molar_mass / (acid_equivalents * acid_density * acid_concentration);
+      acid.molar_mass / (acid.equivalents * acid.density * acid.concentration);
 
   return round(needed_mol_h * acid_volume_per_mol_h);
 }
 
-float PoolChemistry::get_acid_equivalent_factor(AcidType acid_type) {
+PoolChemistry::AcidParam PoolChemistry::get_acid_param(AcidType acid_type) {
   switch (acid_type) {
-    case AcidType::SULFURIC_ACID_14_9_PERCENT:
-      return 2.0f;
-    default:
-      return 0.0f;
-  }
-}
-
-float PoolChemistry::get_acid_molar_mass(AcidType acid_type) {
-  switch (acid_type) {
-    case AcidType::SULFURIC_ACID_14_9_PERCENT:
-      return 98.079f;
-    default:
-      return 0.0f;
-  }
-}
-
-float PoolChemistry::get_acid_density(AcidType acid_type) {
-  switch (acid_type) {
-    case AcidType::SULFURIC_ACID_14_9_PERCENT:
-      return 1.1013f;
-    default:
-      return 0.0f;
-  }
-}
-
-float PoolChemistry::get_acid_concentration(AcidType acid_type) {
-  switch (acid_type) {
-    case AcidType::SULFURIC_ACID_14_9_PERCENT:
-      return 0.149f;
-    default:
-      return 0.0f;
+    case AcidType::SULFURIC_ACID_14_9: {
+      AcidParam param;
+      param.equivalents = 2.0f;
+      param.molar_mass = 98.079f;
+      param.density = 1.1013f;
+      param.concentration = 0.149f;
+      return param;
+    }
+    default: {
+      AcidParam param{0.0f, 0.0f, 0.0f, 0.0f};
+      return param;
+    }
   }
 }
 

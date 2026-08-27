@@ -70,7 +70,7 @@ class PoolPhController : public PollingComponent {
   float target_ph_ = 7.2f;
   float pool_volume_liters_ = 50000.0f;
   float tac_mg_l_ = 150.0f;
-  pool_chemistry::AcidType acid_type_ = pool_chemistry::AcidType::SULFURIC_ACID_14_9_PERCENT;
+  pool_chemistry::AcidType acid_type_ = pool_chemistry::AcidType::SULFURIC_ACID_14_9;
   float acid_strength_percent_ = 14.9f;
   float dosing_flowrate_ml_per_min_ = 60.0f;
   float max_acid_ml_per_day_ = 2000.0f;
