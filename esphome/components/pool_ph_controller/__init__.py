@@ -19,8 +19,10 @@ CONF_TAC_SENSOR = 'tac_sensor'
 CONF_ACID_STRENGTH_SENSOR = 'acid_strength_sensor'
 CONF_DOSING_FLOWRATE_SENSOR = 'dosing_flowrate_sensor'
 CONF_MAX_ACID_SENSOR = 'max_acid_sensor'
+CONF_MIXING_DELAY_SENSOR = 'mixing_delay_sensor'
 CONF_DAILY_ACID_USED_SENSOR = 'daily_acid_used_sensor'
 CONF_ACID_ML_NEEDED_SENSOR = 'acid_ml_needed_sensor'
+CONF_POOL_PUMP_RUNNING = 'pool_pump_running_binary_sensor'
 CONF_ACID_DOSING_BINARY = 'acid_dosing_binary_sensor'
 
 CONFIG_SCHEMA = cv.Schema({
@@ -34,8 +36,10 @@ CONFIG_SCHEMA = cv.Schema({
     cv.Optional(CONF_ACID_STRENGTH_SENSOR): sensor_.sensor_schema(),
     cv.Optional(CONF_DOSING_FLOWRATE_SENSOR): sensor_.sensor_schema(),
     cv.Optional(CONF_MAX_ACID_SENSOR): sensor_.sensor_schema(),
+    cv.Optional(CONF_MIXING_DELAY_SENSOR): sensor_.sensor_schema(),
     cv.Optional(CONF_DAILY_ACID_USED_SENSOR): sensor_.sensor_schema(),
     cv.Optional(CONF_ACID_ML_NEEDED_SENSOR): sensor_.sensor_schema(),
+    cv.Optional(CONF_POOL_PUMP_RUNNING): binary_sensor_.binary_sensor_schema(),
     cv.Optional(CONF_ACID_DOSING_BINARY): binary_sensor_.binary_sensor_schema(),
 }).extend(cv.COMPONENT_SCHEMA)
 
@@ -75,6 +79,10 @@ async def to_code(config):
         sens = await sensor.new_sensor(config[CONF_MAX_ACID_SENSOR])
         cg.add(var.set_max_acid_sensor(sens))
 
+    if CONF_MIXING_DELAY_SENSOR in config:
+        sens = await sensor.new_sensor(config[CONF_MIXING_DELAY_SENSOR])
+        cg.add(var.set_mixing_delay_sensor(sens))
+
     if CONF_DAILY_ACID_USED_SENSOR in config:
         sens = await sensor.new_sensor(config[CONF_DAILY_ACID_USED_SENSOR])
         cg.add(var.set_daily_acid_used_ml_sensor(sens))
@@ -82,6 +90,10 @@ async def to_code(config):
     if CONF_ACID_ML_NEEDED_SENSOR in config:
         sens = await sensor.new_sensor(config[CONF_ACID_ML_NEEDED_SENSOR])
         cg.add(var.set_acid_ml_needed_sensor(sens))
+
+    if CONF_POOL_PUMP_RUNNING in config:
+        bs = await binary_sensor.new_binary_sensor(config[CONF_POOL_PUMP_RUNNING])
+        cg.add(var.set_pool_pump_running_sensor(bs))
 
     if CONF_ACID_DOSING_BINARY in config:
         bs = await binary_sensor.new_binary_sensor(config[CONF_ACID_DOSING_BINARY])

@@ -61,6 +61,34 @@ pool_ph_controller:
     pump_switch: pool_pump_switch
     current_ph_sensor:
       name: "Pool Controller Current pH"
+    target_ph_sensor:
+      name: "Pool Controller Target pH"
+    pool_volume_sensor:
+      name: "Pool Controller Pool Volume"
+      unit_of_measurement: "L"
+    tac_sensor:
+      name: "Pool Controller TAC"
+      unit_of_measurement: "mg/L"
+    acid_strength_sensor:
+      name: "Pool Controller Acid Strength"
+      unit_of_measurement: "%"
+    dosing_flowrate_sensor:
+      name: "Pool Controller Dosing Flowrate"
+      unit_of_measurement: "mL/min"
+    max_acid_sensor:
+      name: "Pool Controller Max Acid Per Day"
+      unit_of_measurement: "mL"
+    mixing_delay_sensor:
+      name: "Pool Controller Mixing Delay"
+      unit_of_measurement: "min"
+    daily_acid_used_sensor:
+      name: "Pool Controller Acid Used Today"
+      unit_of_measurement: "mL"
+    acid_ml_needed_sensor:
+      name: "Pool Controller Acid Needed"
+      unit_of_measurement: "mL"
+    pool_pump_running_binary_sensor:
+      name: "Pool Pump Running"
     acid_dosing_binary_sensor:
       name: "Pool Acid Dosing Enabled"
 
